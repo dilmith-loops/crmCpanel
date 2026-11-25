@@ -127,6 +127,12 @@
                     @else
                         <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-gray-100 text-gray-800">STATUS: {{ strtoupper(str_replace('_', ' ', $pettyCash->status)) }}</span>
                     @endif
+
+                    @if($pettyCash->isFromWorkTracker())
+                        <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                            <i class="fas fa-business-time text-[10px]"></i> WORK TRACKER ALLOWANCE
+                        </span>
+                    @endif
                 </div>
             </div>
         </div>

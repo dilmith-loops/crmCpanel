@@ -37,10 +37,19 @@ class PettyCashRequest extends Model
         'management_approved_by',
         'management_rejection_note',
         'reappeal_count',
+        'source',
+        'late_work_request_id',
+        'is_draft',
+        'pending_proofs',
+        'hod_approved_at',
+        'finance_note',
     ];
 
     protected $casts = [
         'is_iou' => 'boolean',
+        'is_draft' => 'boolean',
+        'pending_proofs' => 'boolean',
+        'hod_approved_at' => 'datetime',
         'approved_amount' => 'decimal:2',
         'settlement_amount' => 'decimal:2',
         'issued_at' => 'datetime',
@@ -171,6 +180,27 @@ class PettyCashRequest extends Model
     public function proofs()
     {
         return $this->hasMany(PettyCashProof::class, 'petty_cash_request_id');
+    }
+
+    public function lateWorkRequest()
+    {
+        return $this->belongsTo(LateWorkRequest::class, 'late_work_request_id');
+    }
+
+    public function isFromWorkTracker(): bool
+    {
+        return $this->source === 'work_tracker' || !is_null($this->late_work_request_id);
+    }
+
+    public function isPendingProofs(): bool
+    {
+        if ($this->pending_proofs) {
+            return true;
+        }
+        if ($this->isFromWorkTracker() && $this->proofs()->count() === 0) {
+            return true;
+        }
+        return false;
     }
 
     public function managementSender()

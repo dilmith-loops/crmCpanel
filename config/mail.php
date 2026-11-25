@@ -49,6 +49,20 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        'late_work_smtp' => [
+            'transport' => env('LATE_WORK_MAIL_TRANSPORT', env('LATE_WORK_MAIL_MAILER', 'smtp')),
+            'scheme' => env('LATE_WORK_MAIL_SCHEME'),
+            'url' => env('LATE_WORK_MAIL_URL'),
+            'host' => env('LATE_WORK_MAIL_HOST', env('MAIL_HOST', '127.0.0.1')),
+            'port' => env('LATE_WORK_MAIL_PORT', env('MAIL_PORT', 587)),
+            'username' => env('LATE_WORK_MAIL_USERNAME', env('MAIL_USERNAME')),
+            'password' => env('LATE_WORK_MAIL_PASSWORD', env('MAIL_PASSWORD')),
+            'encryption' => env('LATE_WORK_MAIL_ENCRYPTION', env('MAIL_ENCRYPTION', 'tls')),
+            'timeout' => null,
+            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
+
         'ses' => [
             'transport' => 'ses',
         ],

@@ -13,6 +13,7 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\PettyCashController;
+use App\Http\Controllers\LateWorkController;
 
 Route::get('login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:15,1')->name('login.post');
@@ -191,6 +192,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/petty-cash/{pettyCash}/admin-reject', [PettyCashController::class, 'adminReject'])->name('petty-cash.adminReject');
     Route::get('/petty-cash/{id}/admin-reject', function ($id) { return redirect()->route('petty-cash.index', ['reject_id' => $id, 'scope' => 'approvals']); });
     Route::post('/petty-cash/{pettyCash}/send-to-management', [PettyCashController::class, 'sendToManagement'])->name('petty-cash.sendToManagement');
+    Route::post('/petty-cash/{pettyCash}/send-to-hod', [PettyCashController::class, 'sendToHod'])->name('petty-cash.sendToHod');
+    Route::post('/petty-cash/{pettyCash}/upload-proofs', [PettyCashController::class, 'uploadProofs'])->name('petty-cash.uploadProofs');
     Route::post('/petty-cash/{pettyCash}/management-approve', [PettyCashController::class, 'managementApprove'])->name('petty-cash.managementApprove');
     Route::get('/petty-cash/{id}/management-approve', function ($id) { return redirect()->route('petty-cash.index', ['mgmt_approve_id' => $id, 'scope' => 'approvals']); });
     Route::post('/petty-cash/{pettyCash}/management-reject', [PettyCashController::class, 'managementReject'])->name('petty-cash.managementReject');
@@ -201,6 +204,23 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/petty-cash/{id}/reappeal', function ($id) { return redirect()->route('petty-cash.index', ['reappeal_id' => $id]); });
     Route::post('/petty-cash/{pettyCash}/remind-iou', [PettyCashController::class, 'sendIouReminder'])->name('petty-cash.remind-iou');
     Route::post('/petty-cash/{pettyCash}/notify-sign', [PettyCashController::class, 'notifySignVoucher'])->name('petty-cash.notify-sign');
+
+    // Late & Weekend Work Routes (Accessible to all authenticated users)
+    Route::get('/late-work', [LateWorkController::class, 'index'])->name('late-work.index');
+    Route::post('/late-work', [LateWorkController::class, 'store'])->name('late-work.store');
+    Route::post('/late-work/{lateWorkRequest}/approve', [LateWorkController::class, 'approve'])->name('late-work.approve');
+    Route::post('/late-work/{lateWorkRequest}/decline', [LateWorkController::class, 'decline'])->name('late-work.decline');
+    Route::post('/late-work/{lateWorkRequest}/withdraw', [LateWorkController::class, 'withdraw'])->name('late-work.withdraw');
+    Route::post('/late-work/{lateWorkRequest}/reappeal', [LateWorkController::class, 'reappeal'])->name('late-work.reappeal');
+    Route::put('/late-work/{lateWorkRequest}', [LateWorkController::class, 'update'])->name('late-work.update');
+    Route::delete('/late-work/{lateWorkRequest}', [LateWorkController::class, 'destroy'])->name('late-work.destroy');
+    Route::get('/late-work/export-csv', [LateWorkController::class, 'exportCsv'])->name('late-work.export-csv');
+    Route::post('/late-work/setup', [LateWorkController::class, 'saveSetup'])->name('late-work.save-setup');
+    Route::post('/late-work/holidays', [LateWorkController::class, 'saveHoliday'])->name('late-work.holidays.save');
+    Route::post('/late-work/holidays/toggle', [LateWorkController::class, 'toggleHoliday'])->name('late-work.holidays.toggle');
+    Route::delete('/late-work/holidays/{holiday}', [LateWorkController::class, 'deleteHoliday'])->name('late-work.holidays.delete');
+    Route::post('/late-work/holiday-types', [LateWorkController::class, 'saveHolidayType'])->name('late-work.holiday-types.save');
+    Route::delete('/late-work/holiday-types/{holidayType}', [LateWorkController::class, 'deleteHolidayType'])->name('late-work.holiday-types.delete');
 
     // CRM Routes (Protected from direct Staff role access)
     Route::middleware(['prevent.staff'])->group(function () {

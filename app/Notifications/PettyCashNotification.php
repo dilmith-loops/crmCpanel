@@ -225,6 +225,7 @@ class PettyCashNotification extends Notification
         $isHodApprovalNeeded = (
             ($this->action === 'submitted' && $pettyCash->status === 'pending_hod') ||
             ($this->action === 'reappealed' && $pettyCash->status === 'pending_hod') ||
+            ($this->action === 'finance_sent_to_hod' && $pettyCash->status === 'pending_hod') ||
             ($this->action === 'iou_settlement_exceeded' && $pettyCash->status === 'pending_settlement_hod')
         );
 
@@ -344,6 +345,9 @@ class PettyCashNotification extends Notification
                 break;
             case 'iou_settlement_hod_approved':
                 $message = "Exceeded IOU settlement {$ref} was APPROVED by HOD and awaits Finance approval.";
+                break;
+            case 'finance_sent_to_hod':
+                $message = "Petty Cash request {$ref} was set to HOD approval state by Finance." . ($this->note ? " Reason: {$this->note}" : "");
                 break;
             case 'notify_sign_voucher':
                 $message = "Please visit the Finance Department to sign the voucher for {$ref}.";

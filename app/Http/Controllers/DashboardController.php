@@ -69,13 +69,8 @@ class DashboardController extends Controller
                 });
 
             $teamPendingApprovalsCount = 0;
-            if ($userRole === 'HR Admin') {
-                $teamPendingApprovalsCount = \App\Models\PettyCashRequest::where(function ($q) use ($user) {
-                    $q->where('hod_id', $user->id)
-                      ->orWhereHas('user', function ($u) use ($user) {
-                          $u->where('supervisor_id', $user->id);
-                      });
-                })->whereIn('status', ['pending_hod', 'pending_settlement_hod'])->count();
+            if ($userRole === 'HR Admin' || $user->isHRAdmin()) {
+                $teamPendingApprovalsCount = \App\Models\PettyCashRequest::whereIn('status', ['pending_hod', 'pending_super_admin', 'pending_management', 'pending_settlement', 'pending_settlement_hod'])->count();
             }
 
             return view('dashboard.staff', [

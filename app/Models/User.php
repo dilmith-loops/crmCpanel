@@ -203,7 +203,11 @@ class User extends Authenticatable
      */
     public function isManagement(): bool
     {
-        return $this->role === 'Management' || $this->hasRole('management');
+        if (empty($this->role)) {
+            return false;
+        }
+        $normalized = str_replace('_', ' ', strtolower(trim($this->role)));
+        return in_array($normalized, ['management', 'senior management', 'director']) || $this->hasRole('management');
     }
 
     /**
@@ -226,6 +230,49 @@ class User extends Authenticatable
     {
         return $this->role === 'HR Admin' || $this->hasRole('hr_admin') || $this->hasRole('hr admin');
     }
+
+    /**
+     * Check if user is authorized to view the Late & Weekend Work Log.
+     * Strictly for Management, HR Admin, and Admins (HOD has their own Team's Requests section).
+     */
+    public function canViewLateWorkLog(): bool
+    {
+        return $this->isManagement() ||
+               $this->isHRAdmin() ||
+               $this->hasAdminPrivileges() ||
+               $this->hasRole('management');
+    }
+
+    /**
+     * Check if user is exclusively an HOD (not Management, HR Admin, or Admin).
+     */
+    public function isHodOnly(): bool
+    {
+        $isHod = $this->role === 'HOD' || $this->hasRole('hod') || $this->hasRole('HOD');
+        return $isHod && !$this->hasAdminPrivileges() && !$this->isManagement() && !$this->isHRAdmin();
+    }
+
+    /**
+     * Check if user is authorized to manage the custom holiday calendar.
+     * Available for HR Admin and IT Admin (and Admins).
+     */
+    public function canManageHolidays(): bool
+    {
+        return $this->isHRAdmin() || $this->isITAdmin() || $this->hasAdminPrivileges();
+    }
+
+
+
+    /**
+     * Check if user can manage Late & Weekend Work setup (departments, HODs, jobs).
+     */
+    public function canManageLateWorkSetup(): bool
+    {
+        return $this->hasAdminPrivileges() ||
+               $this->isHRAdmin() ||
+               $this->isITAdmin();
+    }
+
 
     /**
      * Check if user is authorized to view the Financial Performance Dashboard.
@@ -266,6 +313,17 @@ class User extends Authenticatable
                $this->hasRole('Super Admin') ||
                $this->role === 'IT Admin' ||
                $this->role === 'Finance Admin';
+    }
+
+    /**
+     * Check if user is authorized to edit and delete Late & Weekend Work requests.
+     * Strictly permitted for IT Admin and Finance Admin (including Super Admin).
+     *
+     * @return bool
+     */
+    public function canEditDeleteLateWork(): bool
+    {
+        return $this->isITAdmin() || $this->isFinanceAdmin();
     }
 
     public function deals()

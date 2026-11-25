@@ -133,20 +133,20 @@
                 <i class="fas fa-id-card text-8xl sm:text-9xl"></i>
             </div>
         @endif
-        <div class="relative z-10 flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-5 md:space-x-6 text-center sm:text-left">
-            <div class="relative">
+        <div class="relative z-10 flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-5 md:space-x-6 text-center sm:text-left min-w-0 flex-1">
+            <div class="relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 aspect-square">
                 <img src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background={{ $isHalloween ? 'ea580c' : 'random' }}&color=ffffff&size=128"
                      alt="{{ $user->name }}" 
-                     class="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 {{ $isHalloween ? 'border-orange-400/80 shadow-[0_0_20px_rgba(255,120,0,0.6)]' : 'border-white/30 shadow-lg' }} object-cover flex-shrink-0">
+                     class="w-20 h-20 sm:w-24 sm:h-24 aspect-square rounded-full border-4 {{ $isHalloween ? 'border-orange-400/80 shadow-[0_0_20px_rgba(255,120,0,0.6)]' : 'border-white/30 shadow-lg' }} object-cover shrink-0 block">
                 @if($isHalloween)
                     <span class="absolute -bottom-1 -right-1 text-xl filter drop-shadow">🎃</span>
                 @endif
             </div>
-            <div>
+            <div class="min-w-0">
                 <span class="inline-block px-3 py-1 {{ $isHalloween ? 'bg-orange-500/25 border border-orange-400/50 text-orange-200' : 'bg-white/20 text-white' }} backdrop-blur-md rounded-full text-[11px] sm:text-xs font-semibold uppercase tracking-wider mb-2">
                     <i class="fas {{ $isHalloween ? 'fa-ghost text-amber-300' : 'fa-user-tag' }} mr-1"></i> {{ $user->role === 'HR Admin' ? 'HR Admin' : 'Staff Member' }}
                 </span>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight sm:text-4xl drop-shadow-sm">
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight sm:text-4xl drop-shadow-sm truncate">
                     Welcome, {{ $user->name }}
                 </h1>
                 <p class="{{ $isHalloween ? 'text-orange-200/90' : 'text-white/80' }} text-xs sm:text-sm mt-1">
@@ -154,12 +154,12 @@
                 </p>
             </div>
         </div>
-        <!-- Petty Cash Action Button -->
-        <div class="relative z-10 flex flex-col sm:flex-row gap-2.5">
+        <!-- Quick Action Buttons -->
+        <div class="relative z-10 shrink-0 {{ $user->role === 'HR Admin' ? 'grid grid-cols-1 sm:grid-cols-2 gap-2.5' : 'flex flex-col sm:flex-row gap-2.5' }}">
             @if($user->role === 'HR Admin')
                 <a href="{{ route('petty-cash.index', ['scope' => 'approvals']) }}"
-                    class="w-full sm:w-auto px-5 py-3 {{ $isHalloween ? 'bg-[#1b092b]/80 hover:bg-[#250d3b] text-orange-200 border-orange-500/40' : 'bg-white/20 hover:bg-white/30 text-white border-white/30' }} font-bold rounded-xl shadow-md border transition-all flex items-center justify-center">
-                    <i class="fas fa-check-double mr-2 text-emerald-300 text-base"></i> Team Approvals
+                    class="w-full sm:w-auto px-4 py-2.5 sm:px-5 sm:py-3 {{ $isHalloween ? 'bg-[#1b092b]/80 hover:bg-[#250d3b] text-orange-200 border-orange-500/40' : 'bg-white/20 hover:bg-white/30 text-white border-white/30' }} font-bold text-xs sm:text-sm rounded-xl shadow-md border transition-all flex items-center justify-center whitespace-nowrap">
+                    <i class="fas fa-check-double mr-2 text-emerald-300 text-sm sm:text-base shrink-0"></i> <span>Team Approvals</span>
                     @if(!empty($teamPendingApprovalsCount) && $teamPendingApprovalsCount > 0)
                         <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black bg-red-500 text-white">
                             {{ $teamPendingApprovalsCount }}
@@ -167,13 +167,17 @@
                     @endif
                 </a>
                 <a href="{{ route('petty-cash.index', ['scope' => 'all_team']) }}"
-                    class="w-full sm:w-auto px-5 py-3 {{ $isHalloween ? 'bg-[#1b092b]/80 hover:bg-[#250d3b] text-orange-200 border-orange-500/40' : 'bg-white/20 hover:bg-white/30 text-white border-white/30' }} font-bold rounded-xl shadow-md border transition-all flex items-center justify-center">
-                    <i class="fas fa-users-cog mr-2 text-cyan-200 text-base"></i> Team Requests
+                    class="w-full sm:w-auto px-4 py-2.5 sm:px-5 sm:py-3 {{ $isHalloween ? 'bg-[#1b092b]/80 hover:bg-[#250d3b] text-orange-200 border-orange-500/40' : 'bg-white/20 hover:bg-white/30 text-white border-white/30' }} font-bold text-xs sm:text-sm rounded-xl shadow-md border transition-all flex items-center justify-center whitespace-nowrap">
+                    <i class="fas fa-users-cog mr-2 text-cyan-200 text-sm sm:text-base shrink-0"></i> <span>Team Requests</span>
                 </a>
             @endif
+            <a href="{{ route('late-work.index') }}"
+                class="w-full sm:w-auto px-4 py-2.5 sm:px-5 sm:py-3 {{ $isHalloween ? 'bg-[#1b092b]/80 hover:bg-[#250d3b] text-orange-200 border-orange-500/40' : 'bg-white/20 hover:bg-white/30 text-white border-white/30' }} font-bold text-xs sm:text-sm rounded-xl shadow-md border transition-all flex items-center justify-center whitespace-nowrap">
+                <i class="fas fa-moon mr-2 text-amber-300 text-sm sm:text-base shrink-0"></i> <span>Late Work</span>
+            </a>
             <button onclick="handleNewRequestClick(event)"
-                class="w-full sm:w-auto px-6 py-3 {{ $isHalloween ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold shadow-[0_0_25px_rgba(255,120,0,0.55)] border border-amber-300/40' : 'bg-white text-brand-purple hover:bg-gray-50 shadow-lg' }} font-bold rounded-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center">
-                <i class="fas fa-wallet mr-2 {{ $isHalloween ? 'text-white' : 'text-brand-pink' }} text-lg"></i> Petty Cash Request
+                class="w-full sm:w-auto px-4 py-2.5 sm:px-5 sm:py-3 {{ $isHalloween ? 'bg-[#1b092b]/80 hover:bg-[#250d3b] text-orange-200 border-orange-500/40' : 'bg-white/20 hover:bg-white/30 text-white border-white/30' }} font-bold text-xs sm:text-sm rounded-xl shadow-md border transition-all flex items-center justify-center whitespace-nowrap">
+                <i class="fas fa-wallet mr-2 {{ $isHalloween ? 'text-orange-300' : 'text-pink-300' }} text-sm sm:text-base shrink-0"></i> <span>Petty Cash Request</span>
             </button>
         </div>
     </div>

@@ -161,7 +161,7 @@ class HrAdminPettyCashTest extends TestCase
         $this->assertEquals('Please provide additional invoice copy.', $request->hod_rejection_note);
     }
 
-    public function test_hr_admin_can_view_all_team_requests_of_own_staff(): void
+    public function test_hr_admin_can_view_all_team_requests_across_all_departments(): void
     {
         $ownStaffRequest = PettyCashRequest::create([
             'reference_number' => 'PC-2026-8003',
@@ -188,7 +188,7 @@ class HrAdminPettyCashTest extends TestCase
         $teamResponse = $this->actingAs($this->hrAdmin)->get(route('petty-cash.index', ['scope' => 'all_team']));
         $teamResponse->assertOk();
         $teamResponse->assertSee('PC-2026-8003');
-        $teamResponse->assertDontSee('PC-2026-8004');
+        $teamResponse->assertSee('PC-2026-8004');
     }
 
     public function test_hr_admin_cannot_approve_other_department_requests(): void

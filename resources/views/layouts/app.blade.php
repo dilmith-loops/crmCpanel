@@ -266,6 +266,19 @@
                     <i class="fas fa-wallet w-6"></i>
                     <span>Petty Cash</span>
                 </a>
+                <a href="{{ route('late-work.index', ['tab' => (auth()->check() && (auth()->user()->isManagement() || auth()->user()->isHRAdmin()) ? 'log' : 'new')]) }}"
+                    class="flex items-center px-4 py-3 rounded-md transition {{ request()->routeIs('late-work.*') ? $desktopActiveLink : $desktopInactiveLink }}">
+                    <i class="fas fa-moon w-6 text-amber-400"></i>
+                    <span class="flex-1">Late &amp; Weekend Work</span>
+                    @php
+                        $pendingLwCount = \App\Models\LateWorkRequest::pendingForUser(auth()->user());
+                    @endphp
+                    @if($pendingLwCount > 0)
+                        <span class="ml-auto bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                            {{ $pendingLwCount }}
+                        </span>
+                    @endif
+                </a>
 
                 @if(auth()->check() && !in_array(auth()->user()->role, ['Staff', 'HR Admin']))
                     <a href="{{ route('customers.index') }}"
@@ -423,6 +436,19 @@
                     class="flex items-center px-4 py-3 rounded-lg transition {{ request()->routeIs('petty-cash.*') ? $mobileActiveLink : $mobileInactiveLink }}">
                     <i class="fas fa-wallet w-6"></i>
                     <span>Petty Cash</span>
+                </a>
+                <a href="{{ route('late-work.index', ['tab' => (auth()->check() && (auth()->user()->isManagement() || auth()->user()->isHRAdmin()) ? 'log' : 'new')]) }}"
+                    class="flex items-center px-4 py-3 rounded-lg transition {{ request()->routeIs('late-work.*') ? $mobileActiveLink : $mobileInactiveLink }}">
+                    <i class="fas fa-moon w-6 text-amber-400"></i>
+                    <span class="flex-1">Late &amp; Weekend Work</span>
+                    @php
+                        $pendingLwCountMobile = \App\Models\LateWorkRequest::pendingForUser(auth()->user());
+                    @endphp
+                    @if($pendingLwCountMobile > 0)
+                        <span class="ml-auto bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                            {{ $pendingLwCountMobile }}
+                        </span>
+                    @endif
                 </a>
 
                 @if(auth()->check() && !in_array(auth()->user()->role, ['Staff', 'HR Admin']))

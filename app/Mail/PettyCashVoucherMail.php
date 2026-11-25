@@ -135,6 +135,11 @@ class PettyCashVoucherMail extends Mailable
                 : ($isRequester
                     ? "HOD Approved Your Exceeded IOU Settlement: {$ref} (Sent to Finance)"
                     : "Exceeded IOU Settlement Approved: {$ref} (Sent to Finance)"),
+            'finance_sent_to_hod' => $isHod
+                ? "ACTION REQUIRED: Petty Cash Request {$ref} from {$requesterName} Sent for HOD Approval by Finance"
+                : ($isRequester
+                    ? "Your Petty Cash Request {$ref} Sent to HOD Approval by Finance"
+                    : "Petty Cash Request {$ref} Sent to HOD Approval by Finance"),
             'notify_sign_voucher' => "Action Required: Please visit Finance to sign Voucher for {$typeStr} {$ref}",
             default => "Update on {$typeStr} {$ref}",
         };
@@ -209,6 +214,11 @@ class PettyCashVoucherMail extends Mailable
                     ? "Your exceeded IOU settlement for {$ref} has been APPROVED by your Head of Department ({$approverName}) and forwarded to Finance for final approval."
                     : "You have approved the exceeded IOU settlement for {$ref} ({$requesterName}). It has been forwarded to Finance for final approval."),
             'notify_sign_voucher' => "Please visit the Finance Department to physically or digitally sign the voucher for your {$typeStr} {$ref} ({$amountStr})." . ($isIou ? " Kindly bring any relevant expenditure receipts or documentation if you are settling an IOU." : ""),
+            'finance_sent_to_hod' => $isHod
+                ? "Finance has requested your review and approval for {$typeStr} {$ref} ({$amountStr}) submitted by {$requesterName}." . ($this->note ? " Reason/Note: " . $this->note : "")
+                : ($isRequester
+                    ? "Finance has sent your {$typeStr} {$ref} to your HOD for approval." . ($this->note ? " Reason/Note: " . $this->note : "")
+                    : "{$typeStr} {$ref} was forwarded to HOD for approval by Finance."),
             default => "{$typeStr} {$ref} was updated.",
         };
 

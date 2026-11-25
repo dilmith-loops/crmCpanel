@@ -24,7 +24,7 @@ class PettyCashController extends Controller
             // Show only the logged-in user's own requested petty cash requests
             $query->where('user_id', $user->id);
         } elseif ($scope === 'approvals') {
-            if ($user->isFinanceAdmin()) {
+            if ($user->isFinanceAdmin() || $user->isHRAdmin()) {
                 $query->whereIn('status', ['pending_hod', 'pending_super_admin', 'pending_management', 'pending_settlement', 'pending_settlement_hod']);
             } elseif ($user->isManagement()) {
                 $query->where(function ($q) use ($user) {
@@ -45,14 +45,8 @@ class PettyCashController extends Controller
         } elseif ($scope === 'all_team') {
             if ($user->role === 'Staff') {
                 $query->where('user_id', $user->id);
-            } elseif ($user->role === 'HR Admin') {
-                $query->where(function ($q) use ($user) {
-                    $q->where('hod_id', $user->id)
-                      ->orWhereHas('user', function ($u) use ($user) {
-                          $u->where('supervisor_id', $user->id);
-                      })
-                      ->orWhere('user_id', $user->id);
-                });
+            } elseif ($user->role === 'HR Admin' || $user->isHRAdmin()) {
+                // HR Admin sees all users' requests across all departments
             } elseif ($user->role === 'HOD') {
                 $query->where(function ($q) use ($user) {
                     $q->where('hod_id', $user->id)
@@ -73,7 +67,7 @@ class PettyCashController extends Controller
         // Calculate counts for tabs
         $myRequestsCount = PettyCashRequest::where('user_id', $user->id)->count();
         $pendingApprovalsCount = 0;
-        if ($user->isFinanceAdmin()) {
+        if ($user->isFinanceAdmin() || $user->isHRAdmin()) {
             $pendingApprovalsCount = PettyCashRequest::whereIn('status', ['pending_hod', 'pending_super_admin', 'pending_management', 'pending_settlement', 'pending_settlement_hod'])->count();
         } elseif ($user->isManagement()) {
             $pendingApprovalsCount = PettyCashRequest::where(function ($q) use ($user) {
@@ -554,6 +548,56 @@ class PettyCashController extends Controller
         return redirect()->back()->with('success', $msg);
     }
 
+    public function sendToHod(Request $request, PettyCashRequest $pettyCash)
+    {
+        $user = auth()->user();
+
+        if (!$user->hasAdminPrivileges()) {
+            return redirect()->back()->with('error', 'Unauthorized action. Only Finance Admin or Management can perform this action.');
+        }
+
+        $request->validate([
+            'hod_id' => 'nullable|exists:users,id',
+            'finance_note' => 'nullable|string|max:2000',
+        ]);
+
+        $targetHodId = $request->input('hod_id') ?: ($pettyCash->hod_id ?: ($pettyCash->associated_hod ? $pettyCash->associated_hod->id : null));
+
+        if (!$targetHodId) {
+            return redirect()->back()->with('error', 'Cannot set to HOD approval: No HOD is assigned to this request or requester.');
+        }
+
+        $note = $request->input('finance_note');
+
+        $pettyCash->update([
+            'status' => 'pending_hod',
+            'hod_id' => $targetHodId,
+            'finance_note' => $note,
+        ]);
+
+        $targetHod = User::find($targetHodId);
+        $requestedUser = User::find($pettyCash->user_id);
+
+        // Notify HOD
+        if ($targetHod && $targetHod->id !== $user->id) {
+            $this->safeNotify($targetHod, new PettyCashNotification($pettyCash, 'finance_sent_to_hod', $user, $note), 'finance_sent_to_hod_hod');
+        }
+
+        // Notify Requester
+        if ($requestedUser && $requestedUser->id !== $user->id) {
+            $this->safeNotify($requestedUser, new PettyCashNotification($pettyCash, 'finance_sent_to_hod', $user, $note), 'finance_sent_to_hod_user');
+        }
+
+        $msg = "Petty Cash request #{$pettyCash->reference_number} was set to HOD approval state and forwarded to " . ($targetHod->name ?? 'HOD') . " for approval.";
+
+        if ($request->ajax() || $request->wantsJson()) {
+            session()->flash('success', $msg);
+            return response()->json(['success' => true, 'message' => $msg]);
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
+
     public function managementApprove(Request $request, PettyCashRequest $pettyCash)
     {
         $user = auth()->user();
@@ -950,75 +994,93 @@ class PettyCashController extends Controller
 
     protected function saveProofFile(\Illuminate\Http\UploadedFile $file, int $pettyCashId): PettyCashProof
     {
-        $origName = $file->getClientOriginalName();
-        $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $origName);
-        $filename = time() . '_' . uniqid() . '_' . $safeName;
+        return PettyCashProof::createFromFile($file, $pettyCashId);
+    }
 
-        $destinationPath = public_path('uploads/petty_cash_proofs');
-        if (!file_exists($destinationPath)) {
-            @mkdir($destinationPath, 0755, true);
+    public function uploadProofs(Request $request, PettyCashRequest $pettyCash)
+    {
+        $user = auth()->user();
+
+        $isAuthorized = ($user->id === $pettyCash->user_id)
+            || $user->hasAdminPrivileges()
+            || ($user->id === $pettyCash->hod_id)
+            || ($pettyCash->user && $pettyCash->user->supervisor_id === $user->id);
+
+        if (!$isAuthorized) {
+            return redirect()->back()->with('error', 'Unauthorized action.');
         }
 
-        try {
-            $file->move($destinationPath, $filename);
-        } catch (\Throwable $fe) {
-            \Illuminate\Support\Facades\Log::error('Proof file move failed: ' . $fe->getMessage());
-            throw new \RuntimeException('Failed to save uploaded proof file: ' . $origName);
-        }
-
-        $filePath = 'uploads/petty_cash_proofs/' . $filename;
-
-        // Mirror to alternative paths for shared hosting / LiteSpeed deployments
-        $alt1 = base_path('public/uploads/petty_cash_proofs');
-        if ($destinationPath !== $alt1 && !file_exists($alt1 . '/' . $filename)) {
-            @mkdir($alt1, 0755, true);
-            @copy($destinationPath . '/' . $filename, $alt1 . '/' . $filename);
-        }
-        $alt2 = base_path('uploads/petty_cash_proofs');
-        if ($destinationPath !== $alt2 && !file_exists($alt2 . '/' . $filename)) {
-            @mkdir($alt2, 0755, true);
-            @copy($destinationPath . '/' . $filename, $alt2 . '/' . $filename);
-        }
-
-        return PettyCashProof::create([
-            'petty_cash_request_id' => $pettyCashId,
-            'file_path' => $filePath,
-            'file_name' => $origName,
-            'file_type' => $file->getClientMimeType(),
+        $request->validate([
+            'proofs' => 'required|array|min:1',
+            'proofs.*' => 'file|mimes:jpeg,png,jpg,pdf,doc,docx|max:10240',
         ]);
+
+        foreach ($request->file('proofs') as $file) {
+            if ($file && $file->isValid()) {
+                $this->saveProofFile($file, $pettyCash->id);
+            }
+        }
+
+        $pettyCash->update([
+            'pending_proofs' => false,
+        ]);
+
+        $msg = 'Proof attachments uploaded successfully.';
+        if ($request->ajax() || $request->wantsJson()) {
+            session()->flash('success', $msg);
+            return response()->json(['success' => true, 'message' => $msg]);
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     public function update(Request $request, PettyCashRequest $pettyCash)
     {
         $user = auth()->user();
 
-        if (!$user->hasAdminPrivileges()) {
-            return redirect()->back()->with('error', 'Unauthorized action. Only Finance Admin or Management can edit petty cash requests.');
+        // Check if this is a Work Tracker request before finance approval being edited by requester or HOD
+        $isWorkTrackerBeforeFinance = $pettyCash->isFromWorkTracker() && in_array($pettyCash->status, ['pending_hod', 'pending_super_admin', 'pending_management', 'draft']);
+        $canEditAsOwnerOrHod = $isWorkTrackerBeforeFinance && (
+            $pettyCash->user_id === $user->id ||
+            $pettyCash->hod_id === $user->id ||
+            ($pettyCash->user && $pettyCash->user->supervisor_id === $user->id)
+        );
+
+        if (!$user->hasAdminPrivileges() && !$canEditAsOwnerOrHod) {
+            return redirect()->back()->with('error', 'Unauthorized action. Only Finance Admin, Management, or the requester/HOD before Finance approval can edit this request.');
         }
 
         $isIou = $request->has('is_iou') ? $request->boolean('is_iou') : $pettyCash->is_iou;
 
-        $request->validate([
+        $rules = [
             'hod_id' => 'nullable|exists:users,id',
             'job_number' => 'nullable',
             'job_numbers' => 'nullable|array',
             'job_numbers.*' => 'nullable|string|max:100',
             'extra_notes' => 'nullable|string',
-            'status' => 'required|string|in:pending_hod,pending_super_admin,pending_management,approved,rejected_by_hod,rejected_by_super_admin,rejected_by_management,iou_issued,pending_settlement,pending_settlement_hod,settled',
-            'management_notes' => 'nullable|string',
-            'created_at' => 'nullable|date',
-            'issued_at' => 'nullable|date',
-            'settled_at' => 'nullable|date',
-            'is_iou' => 'nullable|boolean',
             'items' => 'required|array|min:1',
             'items.*.expense_category_id' => $isIou ? 'nullable|exists:expense_categories,id' : 'required|exists:expense_categories,id',
-            'items.*.amount' => 'required|numeric|min:0.01',
+            'items.*.amount' => 'required|numeric|min:0',
             'items.*.description' => 'nullable|string',
+            'items.*.attendees' => 'nullable|array',
             'proofs' => 'nullable|array',
             'proofs.*' => 'file|mimes:jpeg,png,jpg,pdf,doc,docx|max:10240',
             'delete_proofs' => 'nullable|array',
             'delete_proofs.*' => 'exists:petty_cash_proofs,id',
-        ]);
+        ];
+
+        if ($user->hasAdminPrivileges()) {
+            $rules['status'] = 'required|string|in:pending_hod,pending_super_admin,pending_management,approved,rejected_by_hod,rejected_by_super_admin,rejected_by_management,iou_issued,pending_settlement,pending_settlement_hod,settled';
+            $rules['finance_note'] = 'nullable|string';
+            $rules['pending_proofs'] = 'nullable|boolean';
+            $rules['management_notes'] = 'nullable|string';
+            $rules['created_at'] = 'nullable|date';
+            $rules['issued_at'] = 'nullable|date';
+            $rules['settled_at'] = 'nullable|date';
+            $rules['is_iou'] = 'nullable|boolean';
+        }
+
+        $request->validate($rules);
 
         $totalAmount = 0;
         foreach ($request->items as $item) {
@@ -1034,23 +1096,39 @@ class PettyCashController extends Controller
         $jobNumberString = $this->parseJobNumbers($request);
 
         $updateData = [
-            'hod_id' => $request->hod_id,
-            'job_number' => $jobNumberString,
-            'extra_notes' => $request->extra_notes,
-            'status' => $request->status,
-            'management_notes' => $request->management_notes,
             'total_amount' => $totalAmount,
-            'is_iou' => $isIou,
+            'approved_amount' => $totalAmount,
+            'extra_notes' => $request->extra_notes,
         ];
 
-        if ($request->filled('created_at')) {
-            $updateData['created_at'] = $request->created_at;
+        if ($request->filled('hod_id')) {
+            $updateData['hod_id'] = $request->hod_id;
         }
-        if ($request->has('issued_at')) {
-            $updateData['issued_at'] = $request->filled('issued_at') ? $request->issued_at : null;
+
+        if ($request->has('job_numbers') || $request->has('job_number')) {
+            $updateData['job_number'] = $jobNumberString;
         }
-        if ($request->has('settled_at')) {
-            $updateData['settled_at'] = $request->filled('settled_at') ? $request->settled_at : null;
+
+        if ($user->hasAdminPrivileges()) {
+            $updateData['status'] = $request->status;
+            $updateData['management_notes'] = $request->management_notes;
+            $updateData['is_iou'] = $isIou;
+
+            if ($request->has('finance_note')) {
+                $updateData['finance_note'] = $request->input('finance_note');
+            }
+            if ($request->has('pending_proofs')) {
+                $updateData['pending_proofs'] = $request->boolean('pending_proofs');
+            }
+            if ($request->filled('created_at')) {
+                $updateData['created_at'] = $request->created_at;
+            }
+            if ($request->has('issued_at')) {
+                $updateData['issued_at'] = $request->filled('issued_at') ? $request->issued_at : null;
+            }
+            if ($request->has('settled_at')) {
+                $updateData['settled_at'] = $request->filled('settled_at') ? $request->settled_at : null;
+            }
         }
 
         $pettyCash->update($updateData);
@@ -1058,11 +1136,16 @@ class PettyCashController extends Controller
         // Recreate items
         $pettyCash->items()->delete();
         foreach ($request->items as $itemData) {
+            $attendees = null;
+            if (!empty($itemData['attendees']) && is_array($itemData['attendees'])) {
+                $attendees = array_values(array_slice(array_filter(array_map('trim', $itemData['attendees']), fn($n) => $n !== ''), 0, 5));
+            }
             PettyCashItem::create([
                 'petty_cash_request_id' => $pettyCash->id,
                 'expense_category_id' => !empty($itemData['expense_category_id']) ? $itemData['expense_category_id'] : null,
-                'amount' => $itemData['amount'],
+                'amount' => max(0, (float)$itemData['amount']),
                 'description' => $itemData['description'] ?? null,
+                'attendees' => !empty($attendees) ? $attendees : null,
             ]);
         }
 
@@ -1085,6 +1168,14 @@ class PettyCashController extends Controller
             foreach ($request->file('proofs') as $file) {
                 $this->saveProofFile($file, $pettyCash->id);
             }
+        }
+
+        // Automatically update pending_proofs based on proofs count if from work tracker
+        if ($pettyCash->isFromWorkTracker()) {
+            $hasProofs = $pettyCash->proofs()->count() > 0;
+            $pettyCash->update([
+                'pending_proofs' => !$hasProofs,
+            ]);
         }
 
         $msg = 'Petty Cash request updated successfully.';
