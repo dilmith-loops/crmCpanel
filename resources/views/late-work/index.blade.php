@@ -3955,7 +3955,7 @@ function lateWorkApp() {
         async removeHoliday(holidayId, dateStr) {
             if (!confirm(`Are you sure you want to remove the holiday on ${dateStr}?`)) return;
             try {
-                const response = await fetch(`/late-work/holidays/${holidayId}`, {
+                const response = await fetch(`{{ url('late-work/holidays') }}/${holidayId}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -4028,7 +4028,7 @@ function lateWorkApp() {
         async removeHolidayType(typeId, typeName) {
             if (!confirm(`Are you sure you want to remove the holiday type "${typeName}"? Any existing holidays using this type will be reset to Public Holiday.`)) return;
             try {
-                const response = await fetch(`/late-work/holiday-types/${typeId}`, {
+                const response = await fetch(`{{ url('late-work/holiday-types') }}/${typeId}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',

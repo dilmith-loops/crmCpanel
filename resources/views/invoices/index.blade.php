@@ -348,7 +348,7 @@
                                                 <p class="text-[10px] text-gray-500 uppercase tracking-wider" x-text="cost.department || 'General'"></p>
                                             </div>
                                         </div>
-                                        <a :href="'/uploads/' + cost.file_path" 
+                                        <a :href="'{{ asset('uploads') }}/' + cost.file_path" 
                                            target="_blank" 
                                            class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-brand-purple transition-all shadow-sm">
                                             <i class="fas fa-external-link-alt mr-1.5"></i>
@@ -723,7 +723,7 @@
                     note: ''
                 };
                 try {
-                    const res = await fetch('/invoices/' + invoiceId + '/payments', {
+                    const res = await fetch('{{ url('invoices') }}/' + invoiceId + '/payments', {
                         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const data = await res.json();
@@ -758,7 +758,7 @@
                 try {
                     const tokenEl = document.querySelector('meta[name="csrf-token"]');
                     const token = tokenEl ? tokenEl.getAttribute('content') : '{{ csrf_token() }}';
-                    const res = await fetch('/invoices/' + this.activeInvoice.invoice.id + '/payments', {
+                    const res = await fetch('{{ url('invoices') }}/' + this.activeInvoice.invoice.id + '/payments', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -788,7 +788,7 @@
                 try {
                     const tokenEl = document.querySelector('meta[name="csrf-token"]');
                     const token = tokenEl ? tokenEl.getAttribute('content') : '{{ csrf_token() }}';
-                    const res = await fetch('/invoices/' + this.activeInvoice.invoice.id + '/payments/' + paymentId, {
+                    const res = await fetch('{{ url('invoices') }}/' + this.activeInvoice.invoice.id + '/payments/' + paymentId, {
                         method: 'DELETE',
                         headers: {
                             'Accept': 'application/json',

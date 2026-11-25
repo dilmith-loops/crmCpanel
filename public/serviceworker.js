@@ -1,10 +1,12 @@
 var staticCacheName = "pwa-v4";
 var filesToCache = [
-    '/login',
-    '/favicon.png',
-    '/images/pwa-icon-192.png',
-    '/images/pwa-icon-512.png'
-];
+    'login',
+    'favicon.png',
+    'images/pwa-icon-192.png',
+    'images/pwa-icon-512.png'
+].map(function (path) {
+    return new URL(path, self.registration.scope).href;
+});
 
 self.addEventListener("install", function (event) {
     self.skipWaiting();

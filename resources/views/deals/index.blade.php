@@ -1350,7 +1350,7 @@
                                 }
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    fetch(`/deals/${dealId}/stage`, {
+                                    fetch(`{{ url('deals') }}/${dealId}/stage`, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -1926,7 +1926,7 @@
                 }
             });
 
-            fetch(`/deals/${dealId}/create-estimate`, {
+            fetch(`{{ url('deals') }}/${dealId}/create-estimate`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -1959,7 +1959,7 @@
                 }
             });
 
-            fetch(`/deals/${dealId}/create-invoice`, {
+            fetch(`{{ url('deals') }}/${dealId}/create-invoice`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',

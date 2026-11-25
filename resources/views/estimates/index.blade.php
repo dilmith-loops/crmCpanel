@@ -321,7 +321,7 @@
                                                             <p class="text-[10px] text-gray-500 uppercase tracking-wider" x-text="cost.department || 'General'"></p>
                                                         </div>
                                                     </div>
-                                                    <a :href="'/uploads/' + cost.file_path" target="_blank"
+                                                    <a :href="'{{ asset('uploads') }}/' + cost.file_path" target="_blank"
                                                         class="px-4 py-2 bg-brand-blue hover:bg-brand-purple text-white text-xs font-bold rounded shadow-sm transition-all focus:outline-none flex items-center">
                                                         <i class="fas fa-external-link-alt mr-2"></i> VIEW
                                                     </a>
